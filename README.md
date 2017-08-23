@@ -1,6 +1,10 @@
 # easyquery
 Create easy-to-use Query objects that can apply on NumPy structured arrays, astropy Table, and Pandas DataFrame
 
+To install, run
+
+    pip install easyquery
+
 
 A Query object has three major methods: filter, count, and mask.
 All of them operate on NumPy structured array and astropy Table:
