@@ -12,7 +12,7 @@ from setuptools import setup
 
 setup(
     name='easyquery',
-    version='0.1.0',
+    version='0.1.1',
     description='Create easy-to-use Query objects that can apply on NumPy structured arrays, astropy Table, and Pandas DataFrame.',
     url='https://github.com/yymao/easyquery',
     author='Yao-Yuan Mao',

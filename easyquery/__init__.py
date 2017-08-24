@@ -6,7 +6,8 @@ The MIT License (MIT)
 Copyright (c) 2015-2017 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
-
+if not hasattr(list, 'copy'):
+    from builtins import list
 import numpy as np
 import numexpr as ne
 
@@ -120,13 +121,13 @@ class Query(object):
             out._operands = self._operands + other._operands
 
         elif self._operator == operator and other._operator != operator:
-            out._operands = self._operands + [other]
+            out._operands = self._operands + list((other,))
 
         elif self._operator != operator and other._operator == operator:
-            out._operands = [self] + other._operands
+            out._operands = list((self,)) + other._operands
 
         else:
-            out._operands = [self, other]
+            out._operands = list((self, other))
 
         return out
 
@@ -278,8 +279,9 @@ class Query(object):
         return out
 
 
+_Query_Class = Query
 
-def filter(table, *queries, query_class=Query):
+def filter(table, *queries):
     """
     A convenient function to filter `table` with `queries`.
     Equivalent to Query(*queries).filter(table)
@@ -294,10 +296,10 @@ def filter(table, *queries, query_class=Query):
     -------
     table : filtered table
     """
-    return query_class(*queries).filter(table)
+    return _Query_Class(*queries).filter(table)
 
 
-def count(table, *queries, query_class=Query):
+def count(table, *queries):
     """
     A convenient function to count the number of entries in `table`
     that satisfy `queries`.
@@ -313,10 +315,10 @@ def count(table, *queries, query_class=Query):
     -------
     count : int
     """
-    return query_class(*queries).count(table)
+    return _Query_Class(*queries).count(table)
 
 
-def mask(table, *queries, query_class=Query):
+def mask(table, *queries):
     """
     A convenient function to create a mask (a boolean array) for `table`
     given `queries`.
@@ -332,4 +334,4 @@ def mask(table, *queries, query_class=Query):
     -------
     mask : numpy bool array
     """
-    return query_class(*queries).mask(table)
+    return _Query_Class(*queries).mask(table)
