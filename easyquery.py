@@ -3,16 +3,20 @@ Create easy-to-use Query objects that can apply on
 NumPy structured arrays, astropy Table, and Pandas DataFrame.
 Project website: https://github.com/yymao/easyquery
 The MIT License (MIT)
-Copyright (c) 2015-2017 Yao-Yuan Mao (yymao)
+Copyright (c) 2017 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
+
 if not hasattr(list, 'copy'):
-    from builtins import list
+    try:
+        from builtins import list
+    except ImportError:
+        raise ImportError('Please install python package "future"')
 import numpy as np
 import numexpr as ne
 
-__all__ = ['Query', 'filter', 'count', 'mask']
-__version__ = '0.1.0'
+__all__ = ['Query']
+__version__ = '0.1.2'
 
 def _is_string_like(obj):
     """
@@ -69,10 +73,11 @@ class Query(object):
     def __init__(self, *queries):
         self._operator = None
         self._operands = None
+        self._query_class = type(self)
 
         if len(queries) == 1:
             query = queries[0]
-            if isinstance(query, Query):
+            if isinstance(query, self._query_class):
                 self._operator = query._operator
                 self._operands = query._operands if query._operator is None else query._operands.copy()
             else:
@@ -82,7 +87,7 @@ class Query(object):
 
         elif len(queries) > 1:
             self._operator = 'AND'
-            self._operands = [Query(query) for query in queries]
+            self._operands = [self._query_class(query) for query in queries]
 
 
     @staticmethod
@@ -109,11 +114,11 @@ class Query(object):
         if operator not in {'AND', 'OR', 'XOR'}:
             raise ValueError('`operator` must be "AND" or "OR" or "XOR"')
 
-        if not isinstance(other, Query):
-            other = Query(other)
+        if not isinstance(other, self._query_class):
+            other = self._query_class(other)
 
         if out is None:
-            out = Query()
+            out = self._query_class()
 
         out._operator = operator
 
@@ -157,7 +162,7 @@ class Query(object):
         if self._operator == 'NOT':
             return self._operands.copy()
         else:
-            out = Query()
+            out = self._query_class()
             out._operator = 'NOT'
             out._operands = self
         return out
@@ -273,13 +278,20 @@ class Query(object):
         -------
         out : Query object
         """
-        out = Query()
+        out = self._query_class()
         out._operator = self._operator
         out._operands = self._operands if self._operator is None else self._operands.copy()
         return out
 
 
-_Query_Class = Query
+
+_query_class = Query
+
+
+def set_query_class(query_class):
+    assert issubclass(query_class, Query)
+    _query_class = query_class
+
 
 def filter(table, *queries):
     """
@@ -296,7 +308,7 @@ def filter(table, *queries):
     -------
     table : filtered table
     """
-    return _Query_Class(*queries).filter(table)
+    return _query_class(*queries).filter(table)
 
 
 def count(table, *queries):
@@ -315,7 +327,7 @@ def count(table, *queries):
     -------
     count : int
     """
-    return _Query_Class(*queries).count(table)
+    return _query_class(*queries).count(table)
 
 
 def mask(table, *queries):
@@ -334,4 +346,4 @@ def mask(table, *queries):
     -------
     mask : numpy bool array
     """
-    return _Query_Class(*queries).mask(table)
+    return _query_class(*queries).mask(table)
