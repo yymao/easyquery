@@ -126,6 +126,24 @@ def test_derive_class():
     do_compound_query(t, DictQuery, check_query_on_dict_table)
 
 
+def test_variable_names():
+    q1 = Query('log(a) > b**2.0')
+    q2 = Query((lambda x, y: x + y < 1, 'c', 'd'))
+    q3 = q1 & 'a + 2'
+    q4 = ~q2
+    q5 = q1 ^ q2
+    q6 = Query('sin(5)')
+    q7 = Query()
+
+    assert set(q1.variable_names) == {'a', 'b'}
+    assert set(q2.variable_names) == {'c', 'd'}
+    assert set(q3.variable_names) == {'a', 'b'}
+    assert set(q4.variable_names) == {'c', 'd'}
+    assert set(q5.variable_names) == {'a', 'b', 'c', 'd'}
+    assert set(q6.variable_names) == set()
+    assert set(q7.variable_names) == set()
+
+
 if __name__ == '__main__':
     test_valid_init()
     test_invalid_init()

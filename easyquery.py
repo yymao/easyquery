@@ -7,16 +7,20 @@ Copyright (c) 2017 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
 
+import warnings
+import numpy as np
+import numexpr as ne
+
 if not hasattr(list, 'copy'):
     try:
         from builtins import list
     except ImportError:
         raise ImportError('Please install python package "future"')
-import numpy as np
-import numexpr as ne
+
 
 __all__ = ['Query']
-__version__ = '0.1.2'
+__version__ = '0.1.3'
+
 
 def _is_string_like(obj):
     """
@@ -73,6 +77,7 @@ class Query(object):
     def __init__(self, *queries):
         self._operator = None
         self._operands = None
+        self._variable_names = None
         self._query_class = type(self)
 
         if len(queries) == 1:
@@ -283,6 +288,40 @@ class Query(object):
         out._operands = self._operands if self._operator is None else self._operands.copy()
         return out
 
+
+    @staticmethod
+    def _get_variable_names(basic_query):
+        if _is_string_like(basic_query):
+            return tuple(set(ne.necompiler.precompile(basic_query)[-1]))
+
+        elif callable(basic_query):
+            warnings.warn('`variable_names` does not support a single callable query')
+            return tuple()
+
+        elif isinstance(basic_query, tuple) and len(basic_query) > 1 and callable(basic_query[0]):
+            return tuple(set(basic_query[1:]))
+
+
+    @property
+    def variable_names(self):
+        if self._variable_names is None:
+
+            if self._operator is None:
+                if self._operands is None:
+                    self._variable_names = tuple()
+                else:
+                    self._variable_names = self._get_variable_names(self._operands)
+
+            elif self._operator == 'NOT':
+                self._variable_names = self._operands.variable_names
+
+            else:
+                v = list()
+                for op in self._operands:
+                    v.extend(op.variable_names)
+                self._variable_names = tuple(set(v))
+
+        return self._variable_names
 
 
 _query_class = Query
