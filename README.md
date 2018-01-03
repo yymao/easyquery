@@ -1,4 +1,6 @@
 # easyquery
+[![PyPI version](https://img.shields.io/pypi/v/easyquery.svg)](https://pypi.python.org/pypi/easyquery)
+
 Create easy-to-use Query objects that can apply on NumPy structured arrays, astropy Table, and Pandas DataFrame
 
 To install, run
