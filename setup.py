@@ -41,5 +41,5 @@ setup(
     ],
     keywords='easyquery query numpy',
     py_modules=[_name],
-    install_requires=['numpy', 'numexpr'],
+    install_requires=['numpy>=1.7', 'numexpr>=2.0'],
 )
