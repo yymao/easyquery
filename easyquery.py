@@ -3,7 +3,7 @@ Create easy-to-use Query objects that can apply on
 NumPy structured arrays, astropy Table, and Pandas DataFrame.
 Project website: https://github.com/yymao/easyquery
 The MIT License (MIT)
-Copyright (c) 2017 Yao-Yuan Mao (yymao)
+Copyright (c) 2017-2019 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
 
@@ -19,7 +19,7 @@ if not hasattr(list, 'copy'):
 
 
 __all__ = ['Query']
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 
 def _is_string_like(obj):
@@ -74,6 +74,8 @@ class Query(object):
     2
 
     """
+    # pylint: disable=protected-access
+
     def __init__(self, *queries):
         self._operator = None
         self._operands = None
@@ -111,8 +113,8 @@ class Query(object):
 
 
     @staticmethod
-    def _mask_table(table, mask):
-        return table[mask]
+    def _mask_table(table, mask_):
+        return table[mask_]
 
 
     def _combine_queries(self, other, operator, out=None):
@@ -308,6 +310,9 @@ class Query(object):
 
     @property
     def variable_names(self):
+        """
+        Get all variable names required for this query
+        """
         if self._variable_names is None:
 
             if self._operator is None:
@@ -331,12 +336,16 @@ class Query(object):
 _query_class = Query
 
 
-def set_query_class(query_class):
-    assert issubclass(query_class, Query)
+def set_query_class(query_class=Query):
+    """
+    Set default query class
+    """
+    if not issubclass(query_class, Query):
+        raise ValueError('`query_class` must be a subclass of `Query`')
     _query_class = query_class
 
 
-def filter(table, *queries):
+def filter(table, *queries): # pylint: disable=redefined-builtin
     """
     A convenient function to filter `table` with `queries`.
     Equivalent to Query(*queries).filter(table)
@@ -345,7 +354,6 @@ def filter(table, *queries):
     ----------
     table : NumPy structured array, astropy Table, etc.
     queries : string, tuple, callable
-    query_class : subclass of Query, optional
 
     Returns
     -------
@@ -364,7 +372,6 @@ def count(table, *queries):
     ----------
     table : NumPy structured array, astropy Table, etc.
     queries : string, tuple, callable
-    query_class : subclass of Query, optional
 
     Returns
     -------
@@ -383,7 +390,6 @@ def mask(table, *queries):
     ----------
     table : NumPy structured array, astropy Table, etc.
     queries : string, tuple, callable
-    query_class : subclass of Query, optional
 
     Returns
     -------
