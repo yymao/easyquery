@@ -232,7 +232,7 @@ class Query(object):
         return mask_this
 
 
-    def filter(self, table):
+    def filter(self, table, column_slice=None):
         """
         Use the current Query object to create a mask (a boolean array)
         for `table`.
@@ -240,6 +240,7 @@ class Query(object):
         Parameters
         ----------
         table : NumPy structured array, astropy Table, etc.
+        column_slice : Column to return. Default is None (return all columns).
 
         Returns
         -------
@@ -253,7 +254,10 @@ class Query(object):
                 table = op.filter(table)
             return table
 
-        return self._mask_table(table, self.mask(table))
+        return self._mask_table(
+            table if column_slice is None else self._get_table_column(table, column_slice),
+            self.mask(table)
+        )
 
 
     def count(self, table):
