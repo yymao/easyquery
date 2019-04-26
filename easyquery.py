@@ -261,6 +261,7 @@ class Query(object):
             self.mask(table)
         )
 
+    __call__ = filter
 
     def count(self, table):
         """
