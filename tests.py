@@ -144,9 +144,18 @@ def test_variable_names():
     assert set(q7.variable_names) == set()
 
 
+def test_filter_column_slice():
+    t = gen_test_table()
+    q = Query('a > 2')
+    assert (q.filter(t, 'b') == t['b'][t['a'] > 2]).all()
+    assert (q.filter(t, 'c') == t['c'][t['a'] > 2]).all()
+
+
 if __name__ == '__main__':
     test_valid_init()
     test_invalid_init()
     test_simple_query()
     test_compound_query()
     test_derive_class()
+    test_variable_names()
+    test_filter_column_slice()
