@@ -148,7 +148,10 @@ def test_filter_column_slice():
     t = gen_test_table()
     q = Query('a > 2')
     assert (q.filter(t, 'b') == t['b'][t['a'] > 2]).all()
-    assert (q.filter(t, 'c') == t['c'][t['a'] > 2]).all()
+    q = Query('a > 2', 'b < 2')
+    assert (q.filter(t, 'c') == t['c'][(t['a'] > 2) & (t['b'] < 2)]).all()
+    q = Query(None)
+    assert (q.filter(t, 'a') == t['a']).all()
 
 
 if __name__ == '__main__':
