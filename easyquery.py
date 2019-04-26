@@ -249,9 +249,9 @@ class Query(object):
         table : filtered table
         """
         if self._operator is None and self._operands is None:
-            return table
+            return table if column_slice is None else self._get_table_column(table, column_slice)
 
-        if self._operator == 'AND':
+        if self._operator == 'AND' and column_slice is None:
             for op in self._operands:
                 table = op.filter(table)
             return table
