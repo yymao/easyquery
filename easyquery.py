@@ -18,8 +18,8 @@ if not hasattr(list, 'copy'):
         raise ImportError('Please install python package "future"')
 
 
-__all__ = ['Query']
-__version__ = '0.1.4'
+__all__ = ['Query', 'QueryMaker']
+__version__ = '0.1.5'
 
 
 def _is_string_like(obj):
@@ -397,3 +397,32 @@ def mask(table, *queries):
     mask : numpy bool array
     """
     return _query_class(*queries).mask(table)
+
+
+class QueryMaker():
+    """
+    provides convenience functions to generate query objects
+    """
+    @staticmethod
+    def in1d(col_name, arr, assume_unique=False, invert=False):
+        return _query_class((lambda x: np.in1d(x, arr, assume_unique, invert), col_name))
+
+    @staticmethod
+    def vectorize(row_function, *col_names):
+        return _query_class((lambda *args: np.fromiter(map(row_function, *args), np.bool),) + tuple(col_names))
+
+    @staticmethod
+    def contains(col_name, test_value):
+        return QueryMaker.vectorize((lambda x: test_value in x), col_name)
+
+    @staticmethod
+    def equals(col_name, test_value):
+        return QueryMaker.vectorize((lambda x: x == test_value), col_name)
+
+    @staticmethod
+    def startswith(col_name, test_value):
+        return QueryMaker.vectorize((lambda x: x.startswith(test_value)), col_name)
+
+    @staticmethod
+    def endswith(col_name, test_value):
+        return QueryMaker.vectorize((lambda x: x.endswith(test_value)), col_name)
