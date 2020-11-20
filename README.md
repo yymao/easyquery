@@ -1,13 +1,35 @@
 # easyquery
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/easyquery.svg)](https://anaconda.org/conda-forge/easyquery)
 [![PyPI version](https://img.shields.io/pypi/v/easyquery.svg)](https://pypi.python.org/pypi/easyquery)
 
-Create easy-to-use Query objects that can apply on NumPy structured arrays, astropy Table, and Pandas DataFrame
+Create easy-to-use Query objects that can apply on NumPy structured arrays, astropy Table, and Pandas DataFrame.
+
+Tired of writing lots of brackets and keeping track of variable names when filtering table data? Enter `easyquery`! 
+
+Before `easyquery`:
+```python
+subtable = table[table["population"] >= 20000]
+subtable = subtable[subtable["population"] / subtable["area"] >= 1000]
+```
+
+With `easyquery`
+```python
+subtable = Query("population >= 20000", "population / area >= 1000").filter(table)
+```
 
 ## Installation
 
-To install, simply run
+You can install `easyquey` from conda-forge:
 
-    pip install easyquery
+```bash
+conda install scipy --channel conda-forge
+```
+
+Or from PyPI:
+
+```bash
+pip install easyquery
+```
 
 ## Usage
 
