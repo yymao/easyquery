@@ -200,8 +200,9 @@ class Query(object):
 
     def mask(self, table):
         """
-        Use the current Query object to count the number of entries in `table`
-        that satisfy `queries`.
+        Use the current Query object to create a mask (a boolean array)
+        for `table`. Values in the returned mask are determined based on 
+        whether the corresponding rows satisfy input queries.
 
         Parameters
         ----------
@@ -236,8 +237,12 @@ class Query(object):
 
     def filter(self, table, column_slice=None):
         """
-        Use the current Query object to create a mask (a boolean array)
-        for `table`.
+        Use the current Query object to select the rows in `table`
+        that satisfy input queries.
+        If `column_slice` is provided, also select on columns.
+
+        Equivalent to table[Query(...).mask(table)][column_slice]
+        but with more efficient implementaion. 
 
         Parameters
         ----------
@@ -265,8 +270,10 @@ class Query(object):
 
     def count(self, table):
         """
-        Use the current Query object to count the number of entries in `table`
-        that satisfy `queries`.
+        Use the current Query object to count the number of rows in `table`
+        that satisfy input queries.
+
+        Equivalent to np.count_nonzero(Query(...).mask(table)).
 
         Parameters
         ----------
