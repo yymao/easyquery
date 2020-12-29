@@ -3,11 +3,12 @@ Create easy-to-use Query objects that can apply on
 NumPy structured arrays, astropy Table, and Pandas DataFrame.
 Project website: https://github.com/yymao/easyquery
 The MIT License (MIT)
-Copyright (c) 2017-2019 Yao-Yuan Mao (yymao)
+Copyright (c) 2017-2020 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
 
 import warnings
+import functools
 import numpy as np
 import numexpr as ne
 
@@ -19,7 +20,7 @@ if not hasattr(list, 'copy'):
 
 
 __all__ = ['Query', 'QueryMaker']
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 
 def _is_string_like(obj):
@@ -96,26 +97,21 @@ class Query(object):
             self._operator = 'AND'
             self._operands = [self._query_class(query) for query in queries]
 
-
     @staticmethod
     def _get_table_dict(table):
         return table
-
 
     @staticmethod
     def _get_table_len(table):
         return len(table)
 
-
     @staticmethod
     def _get_table_column(table, column):
         return table[column]
 
-
     @staticmethod
     def _mask_table(table, mask_):
         return table[mask_]
-
 
     def _combine_queries(self, other, operator, out=None):
         if operator not in {'AND', 'OR', 'XOR'}:
@@ -142,7 +138,6 @@ class Query(object):
             out._operands = list((self, other))
 
         return out
-
 
     def __and__(self, other):
         return self._combine_queries(other, 'AND')
@@ -180,16 +175,24 @@ class Query(object):
 
     @staticmethod
     def _check_basic_query(basic_query):
-        return basic_query is None or _is_string_like(basic_query) or \
-                callable(basic_query) or (isinstance(basic_query, tuple) and \
-                len(basic_query) > 1 and callable(basic_query[0]))
-
+        return (
+            basic_query is None or
+            _is_string_like(basic_query) or
+            callable(basic_query) or
+            (
+                isinstance(basic_query, tuple) and
+                len(basic_query) > 1 and
+                callable(basic_query[0])
+            )
+        )
 
     def _create_mask(self, table, basic_query):
         if _is_string_like(basic_query):
-            return ne.evaluate(basic_query,
-                               local_dict=self._get_table_dict(table),
-                               global_dict={})
+            return ne.evaluate(
+                basic_query,
+                local_dict=self._get_table_dict(table),
+                global_dict={}
+            )
 
         elif callable(basic_query):
             return basic_query(table)
@@ -197,11 +200,10 @@ class Query(object):
         elif isinstance(basic_query, tuple) and len(basic_query) > 1 and callable(basic_query[0]):
             return basic_query[0](*(self._get_table_column(table, c) for c in basic_query[1:]))
 
-
     def mask(self, table):
         """
         Use the current Query object to create a mask (a boolean array)
-        for `table`. Values in the returned mask are determined based on 
+        for `table`. Values in the returned mask are determined based on
         whether the corresponding rows satisfy input queries.
 
         Parameters
@@ -234,7 +236,6 @@ class Query(object):
 
         return mask_this
 
-
     def filter(self, table, column_slice=None):
         """
         Use the current Query object to select the rows in `table`
@@ -242,7 +243,7 @@ class Query(object):
         If `column_slice` is provided, also select on columns.
 
         Equivalent to table[Query(...).mask(table)][column_slice]
-        but with more efficient implementaion. 
+        but with more efficient implementaion.
 
         Parameters
         ----------
@@ -288,7 +289,6 @@ class Query(object):
 
         return np.count_nonzero(self.mask(table))
 
-
     def copy(self):
         """
         Create a copy of the current Query object.
@@ -302,7 +302,6 @@ class Query(object):
         out._operands = self._operands if self._operator is None else self._operands.copy()
         return out
 
-
     @staticmethod
     def _get_variable_names(basic_query):
         if _is_string_like(basic_query):
@@ -314,7 +313,6 @@ class Query(object):
 
         elif isinstance(basic_query, tuple) and len(basic_query) > 1 and callable(basic_query[0]):
             return tuple(set(basic_query[1:]))
-
 
     @property
     def variable_names(self):
@@ -350,10 +348,11 @@ def set_query_class(query_class=Query):
     """
     if not issubclass(query_class, Query):
         raise ValueError('`query_class` must be a subclass of `Query`')
+    global _query_class
     _query_class = query_class
 
 
-def filter(table, *queries): # pylint: disable=redefined-builtin
+def filter(table, *queries):  # pylint: disable=redefined-builtin
     """
     A convenient function to filter `table` with `queries`.
     Equivalent to Query(*queries).filter(table)
@@ -411,8 +410,12 @@ class QueryMaker():
     provides convenience functions to generate query objects
     """
     @staticmethod
-    def in1d(col_name, arr, assume_unique=False, invert=False):
-        return _query_class((lambda x: np.in1d(x, arr, assume_unique, invert), col_name))
+    def in1d(col_name, test_elements, assume_unique=False, invert=False):
+        return _query_class((functools.partial(np.in1d, ar2=test_elements, assume_unique=assume_unique, invert=invert), col_name))
+
+    @staticmethod
+    def isin(col_name, test_elements, assume_unique=False, invert=False):
+        return _query_class((functools.partial(np.isin, test_elements=test_elements, assume_unique=assume_unique, invert=invert), col_name))
 
     @staticmethod
     def vectorize(row_function, *col_names):
@@ -423,13 +426,33 @@ class QueryMaker():
         return QueryMaker.vectorize((lambda x: test_value in x), col_name)
 
     @staticmethod
-    def equals(col_name, test_value):
-        return QueryMaker.vectorize((lambda x: x == test_value), col_name)
+    def find(col_name, test_value, start=0, end=None):
+        return _query_class((lambda x: np.char.find(x, test_value, start=start, end=end) > -1, col_name))
+
+    contains_str = find
 
     @staticmethod
-    def startswith(col_name, test_value):
-        return QueryMaker.vectorize((lambda x: x.startswith(test_value)), col_name)
+    def equal(col_name, test_value):
+        return _query_class((lambda x: x == test_value, col_name))
+
+    equals = equal
 
     @staticmethod
-    def endswith(col_name, test_value):
-        return QueryMaker.vectorize((lambda x: x.endswith(test_value)), col_name)
+    def not_equal(col_name, test_value):
+        return _query_class((lambda x: x != test_value, col_name))
+
+    @staticmethod
+    def equal_columns(col1_name, col2_name):
+        return _query_class((lambda x, y: x == y, col1_name, col2_name))
+
+    @staticmethod
+    def not_equal_columns(col1_name, col2_name):
+        return _query_class((lambda x, y: x != y, col1_name, col2_name))
+
+    @staticmethod
+    def startswith(col_name, prefix, start=0, end=None):
+        return _query_class((functools.partial(np.char.startswith, prefix=prefix, start=start, end=end), col_name))
+
+    @staticmethod
+    def endswith(col_name, suffix, start=0, end=None):
+        return _query_class((functools.partial(np.char.endswith, suffix=suffix, start=start, end=end), col_name))

@@ -1,5 +1,6 @@
 import numpy as np
-from easyquery import Query
+from easyquery import Query, QueryMaker
+
 
 def test_valid_init():
     """
@@ -28,13 +29,13 @@ def test_invalid_init():
     """
     test invalid Query object creation
     """
-    for q in (1, [lambda x: x>1, 'a'], (lambda x: x>1,), ('a', lambda x: x>1)):
+    for q in (1, [lambda x: x > 1, 'a'], (lambda x: x > 1,), ('a', lambda x: x > 1)):
         check_invalid_init(q)
 
 
 def gen_test_table():
-    return np.array([(1, 5, 4.5), (1, 1, 6.2), (3, 2, 0.5), (5, 5, -3.5)],
-                    dtype=np.dtype([('a', '<i8'), ('b', '<i8'), ('c', '<f8')]))
+    return np.array([(1, 5, 4.5, "abcd"), (1, 1, 6.2, "pqrs"), (3, 2, 0.5, "asdf"), (5, 5, -3.5, "wxyz")],
+                    dtype=np.dtype([('a', '<i8'), ('b', '<i8'), ('c', '<f8'), ('s', '<U4')]))
 
 
 def check_query_on_table(table, query_object, true_mask=None):
@@ -53,7 +54,7 @@ def check_query_on_dict_table(table, query_object, true_mask=None):
     ftable = query_object.filter(table)
     ftable_true = {k: table[k][true_mask] for k in table}
     assert set(ftable) == set(ftable_true), 'filter not correct'
-    assert all((ftable[k]==ftable_true[k]).all() for k in ftable), 'filter not correct'
+    assert all((ftable[k] == ftable_true[k]).all() for k in ftable), 'filter not correct'
     assert query_object.count(table) == np.count_nonzero(true_mask), 'count not correct'
     assert (query_object.mask(table) == true_mask).all(), 'mask not correct'
 
@@ -154,6 +155,23 @@ def test_filter_column_slice():
     assert (q.filter(t, 'a') == t['a']).all()
 
 
+def test_query_maker():
+    t = gen_test_table()
+    test_elements = [1, 2, 3]
+    check_query_on_table(t, QueryMaker.in1d("a", test_elements), np.in1d(t["a"], test_elements))
+    check_query_on_table(t, QueryMaker.isin("a", test_elements), np.isin(t["a"], test_elements))
+
+    check_query_on_table(t, QueryMaker.equal("s", "abcd"), t["s"] == "abcd")
+    check_query_on_table(t, QueryMaker.equals("s", "abcd"), t["s"] == "abcd")
+    check_query_on_table(t, QueryMaker.not_equal("s", "abcd"), t["s"] != "abcd")
+    check_query_on_table(t, QueryMaker.startswith("s", "a"), np.char.startswith(t["s"], "a"))
+    check_query_on_table(t, QueryMaker.endswith("s", "s"), np.char.endswith(t["s"], "s"))
+
+    check_query_on_table(t, QueryMaker.contains("s", "a"), np.char.find(t["s"], "a") > -1)
+    check_query_on_table(t, QueryMaker.find("s", "a"), np.char.find(t["s"], "a") > -1)
+
+    assert QueryMaker.equal_columns("s", "s").mask(t).all()
+
 if __name__ == '__main__':
     test_valid_init()
     test_invalid_init()
@@ -162,3 +180,4 @@ if __name__ == '__main__':
     test_derive_class()
     test_variable_names()
     test_filter_column_slice()
+    test_query_maker()

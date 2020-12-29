@@ -4,7 +4,7 @@ Create easy-to-use Query objects that can apply on
 NumPy structured arrays, astropy Table, and Pandas DataFrame.
 Project website: https://github.com/yymao/easyquery
 The MIT License (MIT)
-Copyright (c) 2017-2019 Yao-Yuan Mao (yymao)
+Copyright (c) 2017-2020 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
 
@@ -38,6 +38,8 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     keywords='easyquery query numpy',
     py_modules=[_name],
