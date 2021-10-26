@@ -3,7 +3,7 @@ Create easy-to-use Query objects that can apply on
 NumPy structured arrays, astropy Table, and Pandas DataFrame.
 Project website: https://github.com/yymao/easyquery
 The MIT License (MIT)
-Copyright (c) 2017-2020 Yao-Yuan Mao (yymao)
+Copyright (c) 2017-2021 Yao-Yuan Mao (yymao)
 http://opensource.org/licenses/MIT
 """
 
@@ -20,7 +20,7 @@ if not hasattr(list, 'copy'):
 
 
 __all__ = ['Query', 'QueryMaker']
-__version__ = '0.1.6'
+__version__ = '0.2.0'
 
 
 def _is_string_like(obj):
@@ -42,7 +42,8 @@ class Query(object):
     All of them operate on NumPy structured array and astropy Table:
     - `filter` returns a new table that only has entries satisfying the query;
     - `count` returns the number of entries satisfying the query;
-    - `mask` returns a bool array for masking the table.
+    - `mask` returns a bool array for masking the table;
+    - `where` returns a int array for the indices that select satisfying entries.
 
     For most simple cases a Query object can be created with a numexpr string.
     A Query object can also be created with a tuple, where the first element of
@@ -69,6 +70,8 @@ class Query(object):
     1
     >>> q.mask(t)
     array([False, False, False,  True], dtype=bool)
+    >>> q.where(t)
+    array([3], dtype=int64)
 
     >>> q2 = (~q & Query('b > c'))
     >>> q2.count(t)
@@ -216,7 +219,7 @@ class Query(object):
         """
         if self._operator is None:
             if self._operands is None:
-                return np.ones(self._get_table_len(table), dtype=np.bool)
+                return np.ones(self._get_table_len(table), dtype=bool)
             else:
                 return self._create_mask(table, self._operands)
 
@@ -243,7 +246,7 @@ class Query(object):
         If `column_slice` is provided, also select on columns.
 
         Equivalent to table[Query(...).mask(table)][column_slice]
-        but with more efficient implementaion.
+        but with more efficient implementation.
 
         Parameters
         ----------
@@ -288,6 +291,24 @@ class Query(object):
             return self._get_table_len(table)
 
         return np.count_nonzero(self.mask(table))
+
+    def where(self, table):
+        """
+        Return the indices of the rows in `table` that satisfy input queries.
+        Equivalent to calling `np.flatnonzero(Query(...).mask(table)`.
+
+        Parameters
+        ----------
+        table : NumPy structured array, astropy Table, etc.
+
+        Returns
+        -------
+        indices : numpy int array
+        """
+        if self._operator is None and self._operands is None:
+            return np.arange(self._get_table_len(table))
+
+        return np.flatnonzero(self.mask(table))
 
     def copy(self):
         """
@@ -405,6 +426,24 @@ def mask(table, *queries):
     return _query_class(*queries).mask(table)
 
 
+def where(table, *queries):
+    """
+    A convenient function to get the indices of the rows in `table` that
+    satisfy input `queries`.
+    Equivalent to `Query(*queries).where(table)`
+
+    Parameters
+    ----------
+    table : NumPy structured array, astropy Table, etc.
+    queries : string, tuple, callable
+
+    Returns
+    -------
+    indices : numpy int array
+    """
+    return _query_class(*queries).where(table)
+
+
 class QueryMaker():
     """
     provides convenience functions to generate query objects
@@ -419,7 +458,7 @@ class QueryMaker():
 
     @staticmethod
     def vectorize(row_function, *col_names):
-        return _query_class((lambda *args: np.fromiter(map(row_function, *args), np.bool),) + tuple(col_names))
+        return _query_class((lambda *args: np.fromiter(map(row_function, *args), bool),) + tuple(col_names))
 
     @staticmethod
     def contains(col_name, test_value):
@@ -456,3 +495,19 @@ class QueryMaker():
     @staticmethod
     def endswith(col_name, suffix, start=0, end=None):
         return _query_class((functools.partial(np.char.endswith, suffix=suffix, start=start, end=end), col_name))
+
+    @staticmethod
+    def isfinite(col_name):
+        return QueryMaker.vectorize(np.isfinite, col_name)
+
+    @staticmethod
+    def isnan(col_name):
+        return QueryMaker.vectorize(np.isnan, col_name)
+
+    @staticmethod
+    def isnotnan(col_name):
+        return ~QueryMaker.isnan(col_name)
+
+    @staticmethod
+    def isclose(col1_name, col2_name):
+        return QueryMaker.vectorize(np.isclose, col1_name, col2_name)

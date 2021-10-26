@@ -6,19 +6,19 @@ def test_valid_init():
     """
     test valid Query object creation
     """
-    q1 = Query()
-    q2 = Query(None)
+    q1 = Query()  # noqa: F841
+    q2 = Query(None)  # noqa: F841
     q3 = Query('x > 2')
-    q4 = Query(lambda t: t['x'] > 2)
-    q5 = Query((lambda c: c > 2, 'x'))
-    q6 = Query('x > 2', lambda t: t['x'] > 2, (lambda c: c > 2, 'x'))
-    q7 = Query(q3)
-    q8 = Query(q3, 'x > 2')
+    q4 = Query(lambda t: t['x'] > 2)  # noqa: F841
+    q5 = Query((lambda c: c > 2, 'x'))  # noqa: F841
+    q6 = Query('x > 2', lambda t: t['x'] > 2, (lambda c: c > 2, 'x'))  # noqa: F841
+    q7 = Query(q3)  # noqa: F841
+    q8 = Query(q3, 'x > 2')  # noqa: F841
 
 
 def check_invalid_init(*queries):
     try:
-        q = Query(*queries)
+        q = Query(*queries)  # noqa: F841
     except ValueError:
         pass
     else:
@@ -34,22 +34,31 @@ def test_invalid_init():
 
 
 def gen_test_table():
-    return np.array([(1, 5, 4.5, "abcd"), (1, 1, 6.2, "pqrs"), (3, 2, 0.5, "asdf"), (5, 5, -3.5, "wxyz")],
-                    dtype=np.dtype([('a', '<i8'), ('b', '<i8'), ('c', '<f8'), ('s', '<U4')]))
+    return np.array(
+        [
+            (1, 5, 4.5, "abcd"),
+            (1, 1, 6.2, "pqrs"),
+            (3, 2, 0.5, "asdf"),
+            (5, 5, -3.5, "wxyz"),
+            (-2, -5, np.inf, "fwmt"),
+        ],
+        dtype=np.dtype([('a', '<i8'), ('b', '<i8'), ('c', '<f8'), ('s', '<U4')]),
+    )
 
 
 def check_query_on_table(table, query_object, true_mask=None):
     if true_mask is None:
-        true_mask = np.ones(len(table), np.bool)
+        true_mask = np.ones(len(table), bool)
 
     assert (query_object.filter(table) == table[true_mask]).all(), 'filter not correct'
     assert query_object.count(table) == np.count_nonzero(true_mask), 'count not correct'
     assert (query_object.mask(table) == true_mask).all(), 'mask not correct'
+    assert (query_object.where(table) == np.flatnonzero(true_mask)).all(), 'where not correct'
 
 
 def check_query_on_dict_table(table, query_object, true_mask=None):
     if true_mask is None:
-        true_mask = np.ones(len(next(table.values())), np.bool)
+        true_mask = np.ones(len(next(table.values())), bool)
 
     ftable = query_object.filter(table)
     ftable_true = {k: table[k][true_mask] for k in table}
@@ -57,6 +66,7 @@ def check_query_on_dict_table(table, query_object, true_mask=None):
     assert all((ftable[k] == ftable_true[k]).all() for k in ftable), 'filter not correct'
     assert query_object.count(table) == np.count_nonzero(true_mask), 'count not correct'
     assert (query_object.mask(table) == true_mask).all(), 'mask not correct'
+    assert (query_object.where(table) == np.flatnonzero(true_mask)).all(), 'where not correct'
 
 
 def test_simple_query():
@@ -170,7 +180,13 @@ def test_query_maker():
     check_query_on_table(t, QueryMaker.contains("s", "a"), np.char.find(t["s"], "a") > -1)
     check_query_on_table(t, QueryMaker.find("s", "a"), np.char.find(t["s"], "a") > -1)
 
+    check_query_on_table(t, QueryMaker.isfinite("c"), np.isfinite(t["c"]))
+    check_query_on_table(t, QueryMaker.isnan("c"), np.isnan(t["c"]))
+    check_query_on_table(t, QueryMaker.isnotnan("c"), ~np.isnan(t["c"]))
+    check_query_on_table(t, QueryMaker.isclose("a", "b"), np.isclose(t["a"], t["b"]))
+
     assert QueryMaker.equal_columns("s", "s").mask(t).all()
+
 
 if __name__ == '__main__':
     test_valid_init()
