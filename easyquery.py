@@ -514,6 +514,9 @@ class QueryMaker():
 
     @staticmethod
     def reduce_compare(columns, reduce_func, compare_func, compare_value):
+        """
+        returns Query((compare_func(reduce_func(np.stack(arrays), axis=0), compare_value), *columns))
+        """
         def _func(*arrays, reduce_func=reduce_func, compare_func=compare_func, compare_value=compare_value):
             return compare_func(reduce_func(np.stack(arrays), axis=0), compare_value)
         return Query((_func,) + tuple(columns))
