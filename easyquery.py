@@ -20,7 +20,7 @@ if not hasattr(list, 'copy'):
 
 
 __all__ = ['Query', 'QueryMaker']
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 
 def _is_string_like(obj):
@@ -511,3 +511,9 @@ class QueryMaker():
     @staticmethod
     def isclose(col1_name, col2_name):
         return QueryMaker.vectorize(np.isclose, col1_name, col2_name)
+
+    @staticmethod
+    def reduce_compare(columns, reduce_func, compare_func, compare_value):
+        def _func(*arrays, reduce_func=reduce_func, compare_func=compare_func, compare_value=compare_value):
+            return compare_func(reduce_func(np.stack(arrays), axis=0), compare_value)
+        return Query((_func,) + tuple(columns))

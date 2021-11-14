@@ -185,6 +185,18 @@ def test_query_maker():
     check_query_on_table(t, QueryMaker.isnotnan("c"), ~np.isnan(t["c"]))
     check_query_on_table(t, QueryMaker.isclose("a", "b"), np.isclose(t["a"], t["b"]))
 
+    check_query_on_table(
+        t,
+        QueryMaker.reduce_compare(["a", "b"], np.max, np.greater, 1),
+        np.maximum(t["a"], t["b"]) > 1,
+    )
+
+    check_query_on_table(
+        t,
+        QueryMaker.reduce_compare(["a", "b"], np.mean, np.less_equal, 2),
+        0.5 * (t["a"] + t["b"]) <= 2,
+    )
+
     assert QueryMaker.equal_columns("s", "s").mask(t).all()
 
 
