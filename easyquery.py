@@ -12,15 +12,8 @@ import functools
 import numpy as np
 import numexpr as ne
 
-if not hasattr(list, 'copy'):
-    try:
-        from builtins import list
-    except ImportError:
-        raise ImportError('Please install python package "future"')
-
-
 __all__ = ['Query', 'QueryMaker']
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 
 
 def _is_string_like(obj):
