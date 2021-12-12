@@ -13,7 +13,7 @@ import numpy as np
 import numexpr as ne
 
 __all__ = ['Query', 'QueryMaker']
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 
 def _is_string_like(obj):
@@ -34,6 +34,7 @@ class Query(object):
     A Query object has three major methods: filter, count, and mask.
     All of them operate on NumPy structured array and astropy Table:
     - `filter` returns a new table that only has entries satisfying the query;
+    - `split` returns two new tables that has entries satisfying and not satisfying the query, respectively;
     - `count` returns the number of entries satisfying the query;
     - `mask` returns a bool array for masking the table;
     - `where` returns a int array for the indices that select satisfying entries.
@@ -303,6 +304,26 @@ class Query(object):
 
         return np.flatnonzero(self.mask(table))
 
+    def split(self, table, column_slice=None):
+        """
+        Split the `table` into two parts: satisfying and not satisfy the queries.
+        The function will return q.filter(table), (~q).filter(table)
+        where `q` is the current Query object.
+
+        Parameters
+        ----------
+        table : NumPy structured array, astropy Table, etc.
+
+        Returns
+        -------
+        table_true : filtered table, satisfying the queries
+        table_false : filtered table, not satisfying the queries
+        """
+        mask = self.mask(table)
+        if column_slice is not None:
+            table = self._get_table_column(table, column_slice)
+        return self._mask_table(table, mask), self._mask_table(table, ~mask)
+
     def copy(self):
         """
         Create a copy of the current Query object.
@@ -435,6 +456,24 @@ def where(table, *queries):
     indices : numpy int array
     """
     return _query_class(*queries).where(table)
+
+
+def split(table, *queries):
+    """
+    A convenient function to split `table` into satisfying and non-satisfying parts.
+    Equivalent to `Query(*queries).split(table)`
+
+    Parameters
+    ----------
+    table : NumPy structured array, astropy Table, etc.
+    queries : string, tuple, callable
+
+    Returns
+    -------
+    table_true : filtered table, satisfying the queries
+    table_false : filtered table, not satisfying the queries
+    """
+    return _query_class(*queries).split(table)
 
 
 class QueryMaker():
