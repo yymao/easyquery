@@ -50,7 +50,11 @@ def check_query_on_table(table, query_object, true_mask=None):
     if true_mask is None:
         true_mask = np.ones(len(table), bool)
 
+    stable1, stable2 = query_object.split(table)
+
     assert (query_object.filter(table) == table[true_mask]).all(), 'filter not correct'
+    assert (stable1 == table[true_mask]).all(), 'split not correct'
+    assert (stable2 == table[~true_mask]).all(), 'split not correct'
     assert query_object.count(table) == np.count_nonzero(true_mask), 'count not correct'
     assert (query_object.mask(table) == true_mask).all(), 'mask not correct'
     assert (query_object.where(table) == np.flatnonzero(true_mask)).all(), 'where not correct'
@@ -62,8 +66,17 @@ def check_query_on_dict_table(table, query_object, true_mask=None):
 
     ftable = query_object.filter(table)
     ftable_true = {k: table[k][true_mask] for k in table}
+
+    stable1, stable2 = query_object.split(table)
+    stable1_true = ftable_true
+    stable2_true = {k: table[k][~true_mask] for k in table}
+
     assert set(ftable) == set(ftable_true), 'filter not correct'
     assert all((ftable[k] == ftable_true[k]).all() for k in ftable), 'filter not correct'
+    assert set(stable1) == set(stable1_true), 'split not correct'
+    assert all((stable1[k] == stable1_true[k]).all() for k in ftable), 'split not correct'
+    assert set(stable2) == set(stable2_true), 'split not correct'
+    assert all((stable2[k] == stable2_true[k]).all() for k in ftable), 'split not correct'
     assert query_object.count(table) == np.count_nonzero(true_mask), 'count not correct'
     assert (query_object.mask(table) == true_mask).all(), 'mask not correct'
     assert (query_object.where(table) == np.flatnonzero(true_mask)).all(), 'where not correct'
@@ -159,10 +172,13 @@ def test_filter_column_slice():
     t = gen_test_table()
     q = Query('a > 2')
     assert (q.filter(t, 'b') == t['b'][t['a'] > 2]).all()
+    assert (q.split(t, 'b')[1] == t['b'][~(t['a'] > 2)]).all()
     q = Query('a > 2', 'b < 2')
     assert (q.filter(t, 'c') == t['c'][(t['a'] > 2) & (t['b'] < 2)]).all()
+    assert (q.split(t, 'c')[1] == t['c'][~((t['a'] > 2) & (t['b'] < 2))]).all()
     q = Query(None)
     assert (q.filter(t, 'a') == t['a']).all()
+    assert len(q.split(t, 'a')[1]) == 0
 
 
 def test_query_maker():
